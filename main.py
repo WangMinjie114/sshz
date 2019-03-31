@@ -19,7 +19,7 @@ def read_ip_list(ip):
         [0, username, port, pass]
         [1,]
     '''
-    pass
+    return [1, ]
 
 def write_msg_file():
     pass
@@ -31,10 +31,10 @@ def connect(username, password, port = 22):
     pass
 
 def main(ipadd, argvs = []):
+    ssh_arvgs = []
     request = read_ip_list(ipadd)
     if request[0] == 0:
         # connect to hosts
-
         pass
     elif request[0] == 1:
         if len(argvs) == 0:
@@ -57,8 +57,25 @@ def main(ipadd, argvs = []):
             for i in argvs:
                 if i == "-l":
                     count = argvs.index(i)
-                    username = argvs[int(count) + 1]
-                if
+                    ssh_username = argvs[int(count) + 1]
+                    argvs.remove(ssh_username)
+                elif i == "-p":
+                    count = argvs.index(i)
+                    ssh_port = argvs[int(count) + 1]
+                    argvs.remove(ssh_port)
+                elif i == "-P":
+                    count = argvs.index(i)
+                    ssh_passwd = argvs[int(count) + 1]
+                    argvs.remove(ssh_passwd)
+                elif "-l" in i[:2]:
+                    ssh_username = i[2:]
+                elif "-p" in i[:2]:
+                    ssh_port = i[2:]
+                elif "-P" in i[:2]:
+                    ssh_passwd = i[2:]
+                else:
+                    ssh_arvgs.append(i)
+        print(ssh_username, ssh_port, ssh_passwd, ssh_arvgs)
     pass
 
 if __name__ == '__main__':
