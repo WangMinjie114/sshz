@@ -1,0 +1,19 @@
+sshz 192.168.132.43
+
+自带参数：
+-l 用户名
+-p 端口
+-P 密码
+
+--copy 发送本地公钥到远端服务器
+
+其余参数直接传递给 ssh
+
+
+user: root(default)
+password: caicloud2018(default)
+
+upgrade_password? [y/n]
+
+login password error !!!
+password:
