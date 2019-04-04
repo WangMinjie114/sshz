@@ -10,6 +10,11 @@ import random
 import os
 import re
 import paramiko
+import subprocess, time
+
+
+# variable
+key_file = "$HOME/.ssh/id_rsa"
 
 def read_ip_list(ip):
     '''
@@ -19,41 +24,123 @@ def read_ip_list(ip):
         [0, username, port, pass]
         [1,]
     '''
+    f = open("file/ip_list")
+    data = f.readlines()
+    f.close()
+    for i in data:
+        if i.replace("\n", "") == ip:
+            f = open("file/host_mess")
+            all_hosts = f.readlines()
+            f.close()
+            for j in all_hosts:
+                if j.split(' @ ')[0] == ip:
+                    host = j.replace('\n', '').split(' @ ')
+                    return [0, host[1], int(host[3]), host[2], bool(host[4])]
     return [1, ]
 
-def write_msg_file():
-    pass
+def write_msg_file(ip, username, password, port, is_key):
+    """
+    ip_list is the ip
+    host_mess is the host list
+    :param ip:
+    :param username:
+    :param password:
+    :param port:
+    :param is_key:
+    :return:
+    """
+    f = open("file/ip_list")
+    data = f.read()
+    f.close()
+    if ip in data:
+        # update mess
+        pass
+    else:
+        f = open("file/ip_list", "a")
+        f.write(ip)
+        f.write('\n')
+        f.close()
+        host = [ip, username, password, str(port), str(is_key)]
+        f = open("file/host_mess", "a")
+        f.write(" @ ".join(host))
+        f.write('\n')
+        f.close()
 
-def connect_test():
-    pass
+def connect_test(ip, username = "root", password = "", port = 22, key_file = key_file):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        if password == '':
+            # use key
+            ret = ssh.connect(hostname=ip, username=username, port=port, key_filename=key_file)
+        else:
+            # use password
+            ret = ssh.connect(hostname=ip, username=username, port=port, password=password)
+            ssh.exec_command('bash')
+        return 0
+    except Exception as e:
+        print(e)
+        return 1
 
-def connect(username, password, port = 22):
-    pass
+def connect(ip, username = "root", password = "", port = 22, key_file = key_file, arvgs = ""):
+    if sys.platform == "darwin" or sys.platform == "linux2":
+        if password != "":
+            f = open("script/ssh_template.sh")
+            data = f.readlines()
+            f.close()
+            # print(data)
+            script_name = "ssh_{0}_{1}.sh".format(ip, time.time())
+            f = open(script_name, "w")
+            for i in data:
+                if "PORT IPADDR ARGVS" in i:
+                    i = i.replace("USERNAME", username).replace("IPADDR", ip).replace("ARGVS", arvgs).replace("PORT", str(port))
+                if "PASSWORD" in i:
+                    i = i.replace("PASSWORD", password)
+                f.write(i)
+            f.close()
+            # print("write_success, file name {0}".format(script_name))
+            request = subprocess.check_call("expect {0}".format(script_name), shell=True)
+            os.remove(script_name)
+            # print(request)
+            if request == 0:
+                write_msg_file(ip=ip, username=username, password=password, port=port, is_key=False)
+        else:
+            request = subprocess.check_call("ssh {1}@{0} -p {2} -i {3} {4}".format(ip, username, port, key_file, arvgs), shell=True)
+            if request == 0:
+                write_msg_file(ip=ip, username=username, password="", port=port, is_key=True)
+    else:
+        # for windows
+        pass
 
 def main(ipadd, argvs = []):
     ssh_arvgs = []
     request = read_ip_list(ipadd)
+    # print(request)
     if request[0] == 0:
         # connect to hosts
-        pass
+        connect(ip=ipadd, username=request[1], password=request[3], port=request[2], arvgs=" ".join(argvs))
     elif request[0] == 1:
         if len(argvs) == 0:
             # 交互式获取用户名密码，用 22 端口尝试，若端口不通，则交互获取端口
             username = input("username: ")
             password = input("password: ")
-            ret = connect_test()
+            ret = connect_test(ip=ipadd, username=username, password=password)
             if ret == 0:
-                write_msg_file()
-                connect(username, password)
+                write_msg_file(ip=ipadd, username=username, password=password, port=22, is_key=False)
+                connect(ip=ipadd, username=username, password=password)
             else:
-                port = input("port: ")
-                ret1 = connect_test()
+                ssh_port = int(input("port: "))
+                ret1 = connect_test(ip=ipadd, username=username, password=password, port=ssh_port)
                 if ret1 == 0:
-                    write_msg_file()
-                    connect(username, password, port)
+                    write_msg_file(ip=ipadd, username=username, password=password, port=ssh_port, is_key=False)
+                    connect(ip=ipadd, username=username, password=password, port=ssh_port, arvgs=" ".join(argvs))
                 else:
                     print("connect error")
         else:
+            # init variable
+            ssh_username = "root"
+            ssh_port = 22
+            ssh_passwd = ""
             for i in argvs:
                 if i == "-l":
                     count = argvs.index(i)
@@ -75,7 +162,23 @@ def main(ipadd, argvs = []):
                     ssh_passwd = i[2:]
                 else:
                     ssh_arvgs.append(i)
-        print(ssh_username, ssh_port, ssh_passwd, ssh_arvgs)
+            connect(ip=ipadd, username=ssh_username, port=ssh_port, password=ssh_passwd, arvgs=" ".join(ssh_arvgs))
+    else:
+        pass
+
+def env_init():
+    # 检测依赖环境
+    if sys.platform == 'linux2':
+        request = subprocess.check_call("expect -c 'uptime'", shell=True)
+        if request != 0:
+            # 安装
+            pass
+    # 创建服务器信息文件
+    f = open("ip_list", "w")
+    f.close()
+    f = open("host_mess", "w")
+    f.close()
+    # 确认 ssh 模板脚本
     pass
 
 if __name__ == '__main__':
@@ -88,3 +191,7 @@ if __name__ == '__main__':
         ipadd = sys.argv[1]
         argvs = sys.argv[2:]
         main(ipadd, argvs)
+
+    # write_msg_file("192.168.20.0", "root", "caicloud2018", 22, False)
+    #
+    # print(read_ip_list("192.168.20.0"))
