@@ -13,6 +13,11 @@ import paramiko
 import subprocess, time
 
 
+obj_path = os.path.dirname(os.path.realpath(sys.argv[0]))
+print(obj_path)
+obj_ip_list_path = obj_path + "/file/ip_list"
+obj_host_mess_path = obj_path + "/file/host_mess"
+obj_ssh_temp_path = obj_path + "/script/ssh_template.sh"
 # variable
 key_file = "$HOME/.ssh/id_rsa"
 
@@ -24,12 +29,12 @@ def read_ip_list(ip):
         [0, username, port, pass]
         [1,]
     '''
-    f = open("file/ip_list")
+    f = open(obj_ip_list_path)
     data = f.readlines()
     f.close()
     for i in data:
         if i.replace("\n", "") == ip:
-            f = open("file/host_mess")
+            f = open(obj_host_mess_path)
             all_hosts = f.readlines()
             f.close()
             for j in all_hosts:
@@ -49,19 +54,19 @@ def write_msg_file(ip, username, password, port, is_key):
     :param is_key:
     :return:
     """
-    f = open("file/ip_list")
+    f = open(obj_ip_list_path)
     data = f.read()
     f.close()
     if ip in data:
         # update mess
         pass
     else:
-        f = open("file/ip_list", "a")
+        f = open(obj_ip_list_path, "a")
         f.write(ip)
         f.write('\n')
         f.close()
         host = [ip, username, password, str(port), str(is_key)]
-        f = open("file/host_mess", "a")
+        f = open(obj_host_mess_path, "a")
         f.write(" @ ".join(host))
         f.write('\n')
         f.close()
@@ -85,7 +90,7 @@ def connect_test(ip, username = "root", password = "", port = 22, key_file = key
 def connect(ip, username = "root", password = "", port = 22, key_file = key_file, arvgs = ""):
     if sys.platform == "darwin" or sys.platform == "linux2":
         if password != "":
-            f = open("script/ssh_template.sh")
+            f = open(obj_ssh_temp_path)
             data = f.readlines()
             f.close()
             # print(data)
