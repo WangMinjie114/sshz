@@ -105,3 +105,8 @@ venv.bak/
 
 # pycharm
 .idea
+
+# file
+file/host_mess
+file/ip_list
+file/test_file

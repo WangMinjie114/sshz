@@ -11,6 +11,7 @@ import os
 import re
 import paramiko
 import subprocess, time
+import getpass
 
 
 obj_path = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -128,7 +129,7 @@ def main(ipadd, argvs = []):
         if len(argvs) == 0:
             # 交互式获取用户名密码，用 22 端口尝试，若端口不通，则交互获取端口
             username = input("username: ")
-            password = input("password: ")
+            password = getpass.getpass("password: ")
             ret = connect_test(ip=ipadd, username=username, password=password)
             if ret == 0:
                 write_msg_file(ip=ipadd, username=username, password=password, port=22, is_key=False)
@@ -172,31 +173,45 @@ def main(ipadd, argvs = []):
         pass
 
 def env_init():
+    # 创建服务器信息文件
+    f = open(obj_ip_list_path, "w")
+    f.close()
+    f = open(obj_host_mess_path, "w")
+    f.close()
+    # 确认 ssh 模板脚本
+    if os.path.exists(obj_ssh_temp_path):
+        template = """#!/usr/bin/expect\n
+set timeout 30\n
+spawn ssh -l USERNAME -p PORT IPADDR ARGVS\n
+expect "assword:"\n
+send "PASSWORD\r"\n
+interact\n
+        """
+        f = open(obj_ssh_temp_path, "w")
+        f.write(template)
+        f.close()
     # 检测依赖环境
     if sys.platform == 'linux2':
         request = subprocess.check_call("expect -c 'uptime'", shell=True)
         if request != 0:
             # 安装
             pass
-    # 创建服务器信息文件
-    f = open("ip_list", "w")
-    f.close()
-    f = open("host_mess", "w")
-    f.close()
-    # 确认 ssh 模板脚本
-    pass
+
 
 if __name__ == '__main__':
+    if os.path.exists(obj_ip_list_path) and os.path.exists(obj_host_mess_path):
+        pass
+    else:
+        env_init()
     if len(sys.argv) == 1:
         print('help')
     elif len(sys.argv) == 2:
-        ipadd = sys.argv[1]
-        main(ipadd)
+        if sys.argv[1] == "init":
+            env_init()
+        else:
+            ipadd = sys.argv[1]
+            main(ipadd)
     else:
         ipadd = sys.argv[1]
         argvs = sys.argv[2:]
         main(ipadd, argvs)
-
-    # write_msg_file("192.168.20.0", "root", "caicloud2018", 22, False)
-    #
-    # print(read_ip_list("192.168.20.0"))
